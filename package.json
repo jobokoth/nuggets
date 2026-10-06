@@ -1,0 +1,17 @@
+{
+  "name": "nuggets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nuggets: a tiny offline PWA of quotes, verses and prayers backed by SQLite (sql.js).",
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "seed": "node scripts/seed.mjs",
+    "icons": "python scripts/icons.py",
+    "build": "npm run vendor && npm run seed",
+    "serve": "npx --yes http-server public -a 127.0.0.1 -p 5180 -c-1"
+  },
+  "devDependencies": {
+    "sql.js": "^1.14.2"
+  }
+}

@@ -1,0 +1,15 @@
+node_modules/
+
+# Private content: never commit or publish
+_RESOURCES/
+private/
+*.db
+*.sqlite
+!public/nuggets.db
+
+# Android signing / build output
+twa/android/
+*.keystore
+*.jks
+*.apk
+*.aab
