@@ -80,7 +80,6 @@ function pinView() {
 function dailyView() {
   const e = state.daily;
   const date = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-  const size = !e ? '' : e.body.length > 420 ? 'sm' : e.body.length > 160 ? 'md' : '';
   return `
     <div class="screen daily">
       <div class="daily-top"><div class="mark">n</div><span class="daily-date">${esc(date)}</span></div>
@@ -88,7 +87,7 @@ function dailyView() {
         ${e ? `
           <span class="eyebrow">Today's nugget · ${KINDS[e.kind]}</span>
           ${e.title ? `<span class="byline-name">${esc(e.title)}</span>` : ''}
-          <span class="daily-text ${size}">${esc(e.body)}</span>
+          <span class="daily-text">${esc(e.body)}</span>
           ${e.scripture ? `<span class="scripture">“${esc(e.scripture)}”</span>` : ''}
           <div class="byline">${avatar(e, 'xs')}<span class="byline-name">${esc(e.reference || KINDS[e.kind])}</span></div>
           <div class="daily-tools">
@@ -233,7 +232,25 @@ function render() {
   const scroll = app.querySelector('.scroll')?.scrollTop;
   app.innerHTML = base + overlay;
   if (scroll && !state.overlay) { const el = app.querySelector('.scroll'); if (el) el.scrollTop = scroll; }
+  fitDaily();
 }
+
+// Grow the daily text to the largest size that still fits on screen without scrolling.
+function fitDaily() {
+  const box = app.querySelector('.daily-body');
+  const text = box?.querySelector('.daily-text');
+  if (!text) return;
+  const fits = () => box.scrollHeight <= box.clientHeight && box.scrollWidth <= box.clientWidth;
+  let lo = 17, hi = 72;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    text.style.fontSize = `${mid}px`;
+    if (fits()) lo = mid; else hi = mid;
+  }
+  text.style.fontSize = `${lo}px`;
+}
+
+window.addEventListener('resize', fitDaily);
 
 // ---------- Actions ----------
 

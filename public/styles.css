@@ -72,9 +72,7 @@ button { font-family: inherit; color: inherit; }
 .daily-body > :first-child { margin-top: auto; }
 .daily-body > :last-child { margin-bottom: auto; }
 .eyebrow { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text); }
-.daily-text { font: 400 28px/1.4 var(--font); letter-spacing: -.4px; white-space: pre-wrap; text-wrap: pretty; }
-.daily-text.md { font-size: 22px; letter-spacing: -.2px; }
-.daily-text.sm { font-size: 17px; letter-spacing: 0; line-height: 1.55; }
+.daily-text { font: 400 28px/1.35 var(--font); letter-spacing: -.015em; white-space: pre-wrap; text-wrap: pretty; overflow-wrap: break-word; }
 .byline { display: flex; align-items: center; gap: 10px; }
 .byline-name { font: 500 14px var(--font); color: rgba(0, 0, 0, .55); }
 .daily-tools { display: flex; gap: 8px; }
