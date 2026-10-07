@@ -3,8 +3,8 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.nuggets.app",
-      "sha256_cert_fingerprints": ["REPLACE_WITH_YOUR_SIGNING_KEY_SHA256"]
+      "package_name": "io.github.jobokoth.nuggets",
+      "sha256_cert_fingerprints": ["4A:6B:C4:49:FD:A2:A8:D0:73:75:18:B1:66:03:B9:33:3C:66:3F:22:FF:30:71:24:91:A0:87:81:F6:4C:02:6E"]
     }
   }
 ]

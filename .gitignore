@@ -8,7 +8,8 @@ private/
 !public/nuggets.db
 
 # Android signing / build output
-twa/android/
+twa/android/*
+!twa/android/twa-manifest.json
 *.keystore
 *.jks
 *.apk

@@ -68,24 +68,30 @@ file: don't put them in `public/` or commit them.
 
 When you change any file in `public/`, bump `VERSION` in `public/sw.js` so installed copies pick it up.
 
-## Build the Android app (Bubblewrap / TWA)
+## Android app (Bubblewrap / TWA)
 
-A TWA loads your PWA from a real HTTPS URL, so host `public/` first (GitHub Pages, Netlify, Cloudflare Pages…).
+The Android app is a Trusted Web Activity: a thin wrapper that opens https://jobokoth.github.io/nuggets/
+full screen in Chrome. Web changes deploy through GitHub Pages; you only rebuild the APK to change the
+wrapper itself (name, icon, colours, version).
 
-1. Deploy `public/` and confirm `https://YOUR_HOST/manifest.webmanifest` loads.
-2. Install Bubblewrap (it downloads its own JDK and Android SDK on first run):
-   ```sh
-   npm i -g @bubblewrap/cli
-   ```
-3. Generate the Android project:
-   ```sh
-   cd twa
-   bubblewrap init --manifest=https://YOUR_HOST/manifest.webmanifest --directory=android
-   ```
-   Suggested answers: package `com.nuggets.app`, app name `Nuggets`, status bar / nav colour `#faf9f6`.
-   Let it create a signing key and **keep the keystore and passwords safe**: you need them for every update.
-4. Build: `cd android && bubblewrap build` → `app-release-signed.apk` (sideload) and `app-release-bundle.aab` (Play Store).
-5. Remove the browser URL bar: run `bubblewrap fingerprint generateAssetLinks`, or copy
-   `twa/assetlinks.template.json` with your key's SHA-256, and serve it at
-   `https://YOUR_HOST/.well-known/assetlinks.json` (i.e. put it in `public/.well-known/`).
-   If you publish on Play with Play App Signing, add Play's signing fingerprint too.
+| Item | Value |
+| --- | --- |
+| Package | `io.github.jobokoth.nuggets` |
+| Config | `twa/android/twa-manifest.json` (committed; the generated Gradle project next to it is not) |
+| Signing key | `C:\Users\nyamo\.android-keys\nuggets.keystore`, passwords in `nuggets-keystore-passwords.txt` next to it. **Back up that folder**: without it you can't update the installed app. |
+| Toolchain | JDK 17 and Android SDK in `~/.bubblewrap` (see `~/.bubblewrap/config.json`) |
+| No address bar | https://jobokoth.github.io/.well-known/assetlinks.json (repo `jobokoth/jobokoth.github.io`) lists the key's SHA-256 |
+
+Build (from `twa/android`), with the passwords from the passwords file:
+
+```powershell
+$env:PATH = "$HOME\.bubblewrap\jdk\jdk-17\bin;$env:PATH"   # jarsigner, needed to sign the .aab
+$env:BUBBLEWRAP_KEYSTORE_PASSWORD = '<store password>'
+$env:BUBBLEWRAP_KEY_PASSWORD = '<key password>'
+npx @bubblewrap/cli update --skipVersionUpgrade   # regenerate the Gradle project from twa-manifest.json
+npx @bubblewrap/cli build --skipPwaValidation
+```
+
+Output: `app-release-signed.apk` (install on a phone) and `app-release-bundle.aab` (Play Store).
+For a new release bump `appVersionCode` / `appVersionName` in `twa-manifest.json` (or drop `--skipVersionUpgrade`).
+If you publish on Google Play with Play App Signing, add Play's signing SHA-256 to `assetlinks.json` too.
