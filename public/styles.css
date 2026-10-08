@@ -75,7 +75,7 @@ button { font-family: inherit; color: inherit; }
 .daily-text { font: 400 28px/1.35 var(--font); letter-spacing: -.015em; white-space: pre-wrap; text-wrap: pretty; overflow-wrap: break-word; }
 .byline { display: flex; align-items: center; gap: 10px; }
 .byline-name { font: 500 14px var(--font); color: rgba(0, 0, 0, .55); }
-.daily-tools { display: flex; gap: 8px; }
+.daily-tools { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip-btn { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 17px; border: 1px solid rgba(0, 0, 0, .1); background: transparent; font: 500 13px var(--font); cursor: pointer; }
 .chip-btn:active { background: var(--press); }
 .chip-btn.on { color: var(--accent-text); border-color: var(--accent); }
@@ -142,6 +142,7 @@ button { font-family: inherit; color: inherit; }
 @keyframes slide-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .bar { padding: 14px 18px; padding-top: calc(14px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--hairline); }
 .bar-title { flex: 1; font: 600 15px var(--font); }
+.bar-title.center { text-align: center; }
 .link { background: none; border: none; cursor: pointer; font: 400 15px var(--font); color: rgba(0, 0, 0, .55); padding: 6px 0; }
 .back { background: none; border: none; cursor: pointer; font: 400 20px var(--font); padding: 4px 6px 4px 0; }
 .post { background: var(--accent); color: #fff; border: none; border-radius: 20px; padding: 9px 20px; font: 600 14px var(--font); cursor: pointer; }
@@ -151,6 +152,7 @@ button { font-family: inherit; color: inherit; }
 .compose-body textarea { border: none; outline: none; resize: none; font: 400 17px/1.5 var(--font); color: var(--text); background: transparent; min-height: 140px; }
 .field { border: none; border-bottom: 1px solid var(--hairline); outline: none; background: transparent; font: 400 15px var(--font); padding: 10px 0; }
 .field:focus { border-bottom-color: var(--accent); }
+textarea.field { resize: none; font: italic 400 15px/1.5 var(--font); color: var(--text); min-height: 44px; }
 .compose-foot { padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hairline); display: flex; justify-content: flex-end; font: 400 12.5px var(--font); color: rgba(0, 0, 0, .35); }
 .compose-foot.low { color: var(--error); }
 

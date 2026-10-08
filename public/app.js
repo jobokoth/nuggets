@@ -16,8 +16,12 @@ const state = {
   activeId: null,
   confirmDelete: false,
   filter: { kind: '', q: '' },
-  compose: { kind: 'quote', body: '', reference: '' },
+  compose: blankCompose(), // compose.id set = editing an existing entry
 };
+
+function blankCompose(kind = 'quote') {
+  return { id: null, from: null, kind, body: '', reference: '', title: '', scripture: '' };
+}
 
 // ---------- Helpers ----------
 
@@ -48,6 +52,56 @@ function toast(msg) {
 const avatar = (e, size = '') => `<div class="avatar ${size} k-${e.kind}">${KINDS[e.kind][0]}</div>`;
 const nugToggle = (e, label) =>
   `<button class="nug-toggle ${e.is_nugget ? 'on' : ''}" data-nug="${e.id}"><i></i>${label ?? (e.is_nugget ? 'Nugget' : 'Add to nuggets')}</button>`;
+
+// ---------- Read aloud ----------
+
+const canSpeak = 'speechSynthesis' in window;
+let speakingId = null;
+let speechRun = 0;
+
+const speakBtn = (e) => canSpeak
+  ? `<button class="chip-btn ${speakingId === e.id ? 'on' : ''}" data-act="speak">${speakingId === e.id ? '■ Stop' : '▶ Read aloud'}</button>`
+  : '';
+
+function refreshSpeakBtns() {
+  const e = state.overlay === 'detail' ? db.getEntry(state.activeId) : state.daily;
+  if (e) app.querySelectorAll('[data-act="speak"]').forEach((b) => b.outerHTML = speakBtn(e));
+}
+
+function stopSpeaking() {
+  if (!canSpeak || speakingId === null) return;
+  speechRun++;
+  speakingId = null;
+  speechSynthesis.cancel();
+  refreshSpeakBtns();
+}
+
+// Speak in sentence-sized chunks: some engines stop partway through one long utterance.
+function speak(e) {
+  if (!canSpeak || !e) return;
+  if (speakingId === e.id) return stopSpeaking();
+  stopSpeaking();
+  const text = [e.title, e.body, e.scripture, e.reference].filter(Boolean).join('.\n');
+  const chunks = [];
+  for (const part of text.split(/(?<=[.!?;:])\s+|\n+/).map((p) => p.trim()).filter(Boolean)) {
+    const last = chunks.length - 1;
+    if (last >= 0 && chunks[last].length + part.length < 200) chunks[last] += ' ' + part;
+    else chunks.push(part);
+  }
+  if (!chunks.length) return;
+  const run = ++speechRun;
+  speakingId = e.id;
+  const done = () => { if (run === speechRun) { speakingId = null; refreshSpeakBtns(); } };
+  chunks.forEach((c, i) => {
+    const u = new SpeechSynthesisUtterance(c);
+    u.lang = document.documentElement.lang || 'en';
+    u.rate = 0.95;
+    if (i === chunks.length - 1) u.onend = done;
+    u.onerror = done;
+    speechSynthesis.speak(u);
+  });
+  refreshSpeakBtns();
+}
 
 // ---------- Screens ----------
 
@@ -92,13 +146,15 @@ function dailyView() {
           <div class="byline">${avatar(e, 'xs')}<span class="byline-name">${esc(e.reference || KINDS[e.kind])}</span></div>
           <div class="daily-tools">
             <button class="chip-btn ${e.is_nugget ? 'on' : ''}" data-act="daily-nug">${e.is_nugget ? '● In nuggets' : '○ Add to nuggets'}</button>
-            <button class="chip-btn" data-act="shuffle">↻ Another</button>
+            <button class="chip-btn" data-act="edit">✎ Edit</button>
+            ${speakBtn(e)}
           </div>`
         : `<div class="empty"><b>Your library is empty</b>Import your Nuggets file (nuggets-private.db) to load your quotes, verses and prayers, or tap View nuggets and + to write your own.
             <div style="margin-top:18px"><button class="chip-btn" data-act="import">Import file</button></div></div>`}
       </div>
       <div class="stack">
         <button class="pill solid" data-act="feed">View nuggets</button>
+        ${e ? '<button class="pill" data-act="shuffle">↻ Another one</button>' : ''}
         <button class="pill" data-act="lock">Close</button>
       </div>
     </div>`;
@@ -189,7 +245,8 @@ function composeView() {
     <div class="overlay">
       <div class="bar">
         <button class="link" data-act="close-overlay">Cancel</button>
-        <button class="post" data-act="post" ${c.body.trim() ? '' : 'disabled'}>Post</button>
+        ${c.id ? '<span class="bar-title center">Edit</span>' : ''}
+        <button class="post" data-act="post" ${c.body.trim() ? '' : 'disabled'}>${c.id ? 'Save' : 'Post'}</button>
       </div>
       <div class="compose-body">
         <div class="chips">
@@ -197,6 +254,9 @@ function composeView() {
         </div>
         <textarea data-input="body" maxlength="${MAX_CHARS}" placeholder="What's a nugget worth sharing?">${esc(c.body)}</textarea>
         <input class="field" data-input="reference" placeholder="Reference or author (optional), e.g. Psalm 23:1" value="${esc(c.reference)}">
+        ${c.id ? `
+          <input class="field" data-input="title" placeholder="Title (optional)" value="${esc(c.title)}">
+          <textarea class="field" data-input="scripture" placeholder="Scripture (optional)">${esc(c.scripture)}</textarea>` : ''}
       </div>
       <div class="compose-foot ${left < 20 ? 'low' : ''}">${left}</div>
     </div>`;
@@ -217,6 +277,10 @@ function detailView() {
         <span class="detail-time">Added ${parseUtc(e.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} · shown ${e.shown_count}×</span>
         <div class="chips">
           ${Object.entries(KINDS).map(([k, v]) => `<button class="chip ${e.kind === k ? 'on' : ''}" data-set-kind="${k}">${v}</button>`).join('')}
+        </div>
+        <div class="daily-tools">
+          <button class="chip-btn" data-act="edit">✎ Edit</button>
+          ${speakBtn(e)}
         </div>
         <div class="detail-actions">
           ${nugToggle(e, e.is_nugget ? 'In nuggets' : 'Add to nuggets')}
@@ -255,32 +319,68 @@ window.addEventListener('resize', fitDaily);
 // ---------- Actions ----------
 
 function go(screen) {
+  stopSpeaking();
   if (state.overlay) closeOverlay();
   state.screen = screen;
   render();
 }
 
 function lock() {
+  stopSpeaking();
   Object.assign(state, { screen: 'pin', overlay: null, pin: '', pinError: false, pinMode: db.getSetting('pin_hash') ? 'unlock' : 'create' });
   render();
 }
 
+function autosize(el) {
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
 function openOverlay(name, extra = {}) {
+  stopSpeaking();
+  // Editing from the detail view swaps that overlay in place, so Cancel/Save return to it.
+  const swap = state.overlay === 'detail' && name === 'compose';
   Object.assign(state, { overlay: name, confirmDelete: false }, extra);
-  history.pushState({ overlay: name }, '');
+  if (swap) history.replaceState({ overlay: name }, '');
+  else history.pushState({ overlay: name }, '');
   render();
-  if (name === 'compose') app.querySelector('textarea')?.focus();
+  if (name === 'compose') {
+    app.querySelectorAll('.overlay textarea').forEach(autosize);
+    app.querySelector('textarea')?.focus();
+  }
 }
 
 function closeOverlay() {
+  stopSpeaking();
+  const from = state.compose.id ? state.compose.from : null;
+  if (state.compose.id) state.compose = blankCompose(state.compose.kind);
+  if (state.overlay === 'compose' && from === 'detail') {
+    state.overlay = 'detail';
+    history.replaceState({ overlay: 'detail' }, '');
+    return render();
+  }
   state.overlay = null;
   if (history.state?.overlay) history.back();
   render();
 }
 
 window.addEventListener('popstate', () => {
+  stopSpeaking();
+  if (state.compose.id) state.compose = blankCompose(state.compose.kind);
   if (state.overlay) { state.overlay = null; render(); }
 });
+
+function openEdit() {
+  const from = state.overlay === 'detail' ? 'detail' : 'daily';
+  const e = db.getEntry(from === 'detail' ? state.activeId : state.daily?.id);
+  if (!e) return;
+  openOverlay('compose', {
+    compose: {
+      id: e.id, from, kind: e.kind, body: e.body,
+      reference: e.reference || '', title: e.title || '', scripture: e.scripture || '',
+    },
+  });
+}
 
 async function pressKey(k) {
   if (state.pinError) return;
@@ -338,8 +438,14 @@ function postEntry() {
   const c = state.compose;
   const body = c.body.trim();
   if (!body) return;
+  if (c.id) {
+    db.updateEntry(c.id, { kind: c.kind, body, reference: c.reference.trim(), title: c.title.trim(), scripture: c.scripture.trim() });
+    if (state.daily?.id === c.id) state.daily = db.getEntry(c.id);
+    closeOverlay();
+    return toast('Saved');
+  }
   db.addEntry({ kind: c.kind, body, reference: c.reference.trim() });
-  state.compose = { kind: c.kind, body: '', reference: '' };
+  state.compose = blankCompose(c.kind);
   state.screen = 'feed';
   closeOverlay();
   toast('Posted to nuggets');
@@ -378,7 +484,9 @@ const ACTIONS = {
   library: () => go('library'),
   lock,
   today: () => { state.daily = db.pickRandom(state.daily?.id); go('daily'); },
-  shuffle: () => { state.daily = db.pickRandom(state.daily?.id); render(); },
+  shuffle: () => { stopSpeaking(); state.daily = db.pickRandom(state.daily?.id); render(); },
+  edit: openEdit,
+  speak: () => speak(state.overlay === 'detail' ? db.getEntry(state.activeId) : state.daily),
   'daily-nug': () => toggleNugget(state.daily.id),
   compose: () => openOverlay('compose'),
   'close-overlay': closeOverlay,
@@ -417,11 +525,10 @@ app.addEventListener('input', (ev) => {
   if (field === 'search') {
     state.filter.q = ev.target.value.trim();
     document.getElementById('lib-list').innerHTML = libraryListView();
-  } else if (field === 'body' || field === 'reference') {
+  } else if (field in state.compose) {
     state.compose[field] = ev.target.value;
+    if (ev.target.tagName === 'TEXTAREA') autosize(ev.target);
     if (field === 'body') {
-      ev.target.style.height = 'auto';
-      ev.target.style.height = `${ev.target.scrollHeight}px`;
       const left = MAX_CHARS - ev.target.value.length;
       const foot = app.querySelector('.compose-foot');
       foot.textContent = left;
@@ -441,7 +548,7 @@ document.addEventListener('keydown', (ev) => {
 // Re-lock when the app comes back after a while, so each "open" shows a fresh nugget.
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { hiddenAt = Date.now(); db.saveNow(); return; }
+  if (document.hidden) { hiddenAt = Date.now(); stopSpeaking(); db.saveNow(); return; }
   if (hiddenAt && Date.now() - hiddenAt > RELOCK_AFTER_MS && state.screen !== 'pin') lock();
 });
 

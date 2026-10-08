@@ -123,6 +123,13 @@ export function addEntry({ kind, body, reference }) {
   );
 }
 
+export function updateEntry(id, { kind, title, body, reference, scripture }) {
+  run(
+    'UPDATE entries SET kind = ?, title = ?, body = ?, reference = ?, scripture = ? WHERE id = ?',
+    [kind, title || null, body, reference || null, scripture || null, id]
+  );
+}
+
 export const getSetting = (key) => one('SELECT value FROM settings WHERE key = ?', [key])?.value ?? null;
 
 export function setSetting(key, value) {

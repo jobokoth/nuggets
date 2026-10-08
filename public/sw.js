@@ -1,5 +1,5 @@
 // Offline app shell. Bump VERSION whenever any file below changes.
-const VERSION = 'nuggets-v3';
+const VERSION = 'nuggets-v4';
 const SHELL = [
   './', 'index.html', 'styles.css', 'app.js', 'db.js', 'nuggets.db', 'manifest.webmanifest',
   'vendor/sql-wasm.js', 'vendor/sql-wasm.wasm',

@@ -17,10 +17,10 @@ It is wrapped as an Android app with Bubblewrap (Trusted Web Activity).
 | Screen | What it does |
 | --- | --- |
 | PIN | Create a 4-digit PIN on first run, then unlock with it. |
-| Today's nugget | Random entry on every unlock (and when you come back after 5+ minutes away). Add it to nuggets, or tap **Another**. |
+| Today's nugget | Random entry on every unlock (and when you come back after 5+ minutes away). Add it to nuggets, **Edit** it, **Read aloud** (device text-to-speech), or tap **Another one**. |
 | Nuggets | Feed of everything marked as a nugget, newest first. **+** writes a new one. |
 | Library | Every entry, with search, Quote/Verse/Prayer filters, nugget toggle, export/import backup and change PIN. |
-| Detail | Full text, change the type (the importer guesses it), add/remove from nuggets, delete. |
+| Detail | Full text, change the type (the importer guesses it), edit, read aloud, add/remove from nuggets, delete. |
 
 ## Develop
 
