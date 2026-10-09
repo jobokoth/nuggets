@@ -79,6 +79,11 @@ export function pickRandom(excludeId = 0) {
 
 export const getEntry = (id) => one('SELECT * FROM entries WHERE id = ?', [id]);
 
+// One pinned entry at a time; it opens the app on every unlock until unpinned.
+export const pinnedId = () => Number(getSetting('pinned_id')) || 0;
+export const setPinned = (id) => setSetting('pinned_id', id ? String(id) : '');
+export const getPinned = () => (pinnedId() && getEntry(pinnedId())) || null;
+
 export const nuggets = () =>
   all('SELECT * FROM entries WHERE is_nugget = 1 ORDER BY nugget_at DESC, id DESC');
 
@@ -114,7 +119,10 @@ export function setNugget(id, on) {
 
 export const setKind = (id, kind) => run('UPDATE entries SET kind = ? WHERE id = ?', [kind, id]);
 
-export const deleteEntry = (id) => run('DELETE FROM entries WHERE id = ?', [id]);
+export function deleteEntry(id) {
+  if (pinnedId() === id) setPinned(0);
+  run('DELETE FROM entries WHERE id = ?', [id]);
+}
 
 export function addEntry({ kind, body, reference }) {
   run(

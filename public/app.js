@@ -109,6 +109,39 @@ function speak(e) {
   refreshSpeakBtns();
 }
 
+// ---------- Pin & share ----------
+
+const pinBtn = (e) => {
+  const on = db.pinnedId() === e.id;
+  return `<button class="chip-btn ${on ? 'on' : ''}" data-act="pin-entry">${on ? '📌 Pinned' : '📌 Pin'}</button>`;
+};
+const shareBtn = () => '<button class="chip-btn" data-act="share">↗ Share</button>';
+
+function togglePinned(e) {
+  const on = db.pinnedId() !== e.id;
+  db.setPinned(on ? e.id : 0);
+  render();
+  toast(on ? 'Pinned: it will greet you next time' : 'Unpinned');
+}
+
+const shareText = (e) => [
+  e.title,
+  e.body,
+  e.scripture && `“${e.scripture}”`,
+  e.reference && `— ${e.reference}`,
+].filter(Boolean).join('\n\n');
+
+// The system share sheet lists WhatsApp (contacts and "My status"); otherwise open WhatsApp directly.
+async function shareEntry(e) {
+  if (!e) return;
+  const text = shareText(e);
+  if (navigator.share) {
+    try { return await navigator.share({ text }); }
+    catch (err) { if (err.name === 'AbortError') return; }
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+}
+
 // ---------- Screens ----------
 
 function pinView() {
@@ -149,13 +182,15 @@ function dailyView() {
       <div class="daily-top"><div class="mark">n</div><span class="daily-date">${esc(date)}</span></div>
       <div class="daily-body">
         ${e ? `
-          <span class="eyebrow">Today's nugget · ${KINDS[e.kind]}</span>
+          <span class="eyebrow">${db.pinnedId() === e.id ? 'Pinned nugget' : "Today's nugget"} · ${KINDS[e.kind]}</span>
           ${e.title ? `<span class="byline-name">${esc(e.title)}</span>` : ''}
           <span class="daily-text">${esc(e.body)}</span>
           ${e.scripture ? `<span class="scripture">“${esc(e.scripture)}”</span>` : ''}
           <div class="byline">${avatar(e, 'xs')}<span class="byline-name">${esc(e.reference || KINDS[e.kind])}</span></div>
           <div class="daily-tools">
             <button class="chip-btn ${e.is_nugget ? 'on' : ''}" data-act="daily-nug">${e.is_nugget ? '● In nuggets' : '○ Add to nuggets'}</button>
+            ${pinBtn(e)}
+            ${shareBtn()}
             <button class="chip-btn" data-act="edit">✎ Edit</button>
             ${speakBtn(e)}
           </div>`
@@ -179,6 +214,7 @@ function rowView(e, { showNugToggle = true } = {}) {
       ${avatar(e)}
       <div class="row-main">
         <div class="row-meta">
+          ${db.pinnedId() === e.id ? '<span class="row-time">📌</span>' : ''}
           <span class="row-name">${esc(e.title || KINDS[e.kind])}</span>
           ${e.reference ? `<span class="row-handle">${esc(e.reference)}</span>` : ''}
           ${e.nugget_at && state.screen === 'feed' ? `<span class="row-time">· ${ago(e.nugget_at)}</span>` : ''}
@@ -293,6 +329,8 @@ function detailView() {
           ${Object.entries(KINDS).map(([k, v]) => `<button class="chip ${e.kind === k ? 'on' : ''}" data-set-kind="${k}">${v}</button>`).join('')}
         </div>
         <div class="daily-tools">
+          ${pinBtn(e)}
+          ${shareBtn()}
           <button class="chip-btn" data-act="edit">✎ Edit</button>
           ${speakBtn(e)}
         </div>
@@ -449,7 +487,7 @@ async function pressKey(k) {
 
 function unlock() {
   fp.cancel();
-  Object.assign(state, { screen: 'daily', pin: '', pinMode: 'unlock', daily: db.pickRandom() });
+  Object.assign(state, { screen: 'daily', pin: '', pinMode: 'unlock', daily: db.getPinned() || db.pickRandom() });
   setTimeout(render, 150);
 }
 
@@ -521,6 +559,8 @@ const ACTIONS = {
   edit: openEdit,
   speak: () => speak(state.overlay === 'detail' ? db.getEntry(state.activeId) : state.daily),
   'daily-nug': () => toggleNugget(state.daily.id),
+  'pin-entry': () => togglePinned(state.overlay === 'detail' ? db.getEntry(state.activeId) : state.daily),
+  share: () => shareEntry(state.overlay === 'detail' ? db.getEntry(state.activeId) : state.daily),
   compose: () => openOverlay('compose'),
   'close-overlay': closeOverlay,
   post: postEntry,
