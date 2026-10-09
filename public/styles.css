@@ -83,6 +83,8 @@ button { font-family: inherit; color: inherit; }
 .pill { height: 52px; border-radius: 26px; border: 1px solid rgba(0, 0, 0, .12); background: transparent; font: 500 15px var(--font); cursor: pointer; }
 .pill.solid { background: var(--text); color: #fff; border: none; font-weight: 600; }
 .pill:active { opacity: .85; }
+.pill-row { display: flex; gap: 10px; }
+.pill-row .pill { flex: 1; }
 
 /* ---------- Shared bits ---------- */
 .avatar { width: 38px; height: 38px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; font: 600 14px var(--font); color: #fff; }

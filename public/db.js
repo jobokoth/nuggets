@@ -150,6 +150,8 @@ export async function importBytes(bytes) {
   if (pin && !hasPin) {
     next.run("INSERT INTO settings (key, value) VALUES ('pin_hash', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [pin]);
   }
+  // A fingerprint credential only exists on the phone that made it, so always keep this device's.
+  next.run("INSERT INTO settings (key, value) VALUES ('fingerprint', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [getSetting('fingerprint') || '']);
   db.close();
   db = next;
   await saveNow();

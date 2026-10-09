@@ -16,10 +16,10 @@ It is wrapped as an Android app with Bubblewrap (Trusted Web Activity).
 
 | Screen | What it does |
 | --- | --- |
-| PIN | Create a 4-digit PIN on first run, then unlock with it. |
-| Today's nugget | Random entry on every unlock (and when you come back after 5+ minutes away). Add it to nuggets, **Edit** it, **Read aloud** (device text-to-speech), or tap **Another one**. |
+| PIN | Create a 4-digit PIN on first run, then unlock with it. If fingerprint is on, the fingerprint prompt opens by itself (or tap the fingerprint key), **weekdays 9am–7pm only** by the phone's clock; outside those hours it's PIN only. |
+| Today's nugget | Random entry on every unlock (and when you come back after 5+ minutes away). Add it to nuggets, **Edit** it, **Read aloud** (device text-to-speech), tap **Another one**, or **New nugget** to write your own. |
 | Nuggets | Feed of everything marked as a nugget, newest first. **+** writes a new one. |
-| Library | Every entry, with search, Quote/Verse/Prayer filters, nugget toggle, export/import backup and change PIN. |
+| Library | Every entry, with search, Quote/Verse/Prayer filters, nugget toggle, export/import backup and change PIN, and turn fingerprint unlock on or off. |
 | Detail | Full text, change the type (the importer guesses it), edit, read aloud, add/remove from nuggets, delete. |
 
 ## Develop

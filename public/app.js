@@ -1,4 +1,5 @@
 import * as db from './db.js';
+import * as fp from './fingerprint.js';
 
 const KINDS = { quote: 'Quote', verse: 'Verse', prayer: 'Prayer' };
 const MAX_CHARS = 2000;
@@ -48,6 +49,11 @@ function toast(msg) {
   app.insertAdjacentHTML('beforeend', `<div class="toast">${esc(msg)}</div>`);
   setTimeout(() => document.querySelector('.toast')?.remove(), 1800);
 }
+
+const FINGER_ICON = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+  <path d="M5 9.5a7.5 7.5 0 0 1 14 0"/><path d="M7.5 19c-.8-1.7-1.2-3.4-1.2-5.2a5.7 5.7 0 0 1 11.4 0c0 .7 0 1.4-.1 2"/>
+  <path d="M10.2 20.5a13 13 0 0 1-1.3-6.7 3.1 3.1 0 0 1 6.2 0c0 2.3-.3 4.3-1 6"/><path d="M12 13.8c0 2.7.5 4.7 1.4 6.4"/>
+  <path d="M17.5 19.5c.5-1.3.8-2.4.9-3.6"/></svg>`;
 
 const avatar = (e, size = '') => `<div class="avatar ${size} k-${e.kind}">${KINDS[e.kind][0]}</div>`;
 const nugToggle = (e, label) =>
@@ -109,8 +115,10 @@ function pinView() {
   const label = { unlock: 'Enter your PIN', create: 'Create a 4-digit PIN', confirm: 'Confirm your PIN' }[state.pinMode];
   const msg = state.pinError
     ? (state.pinMode === 'unlock' ? 'Incorrect PIN, try again' : "PINs didn't match, start again")
-    : (state.pinMode === 'unlock' ? '' : 'You will use this to open Nuggets');
-  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'];
+    : state.pinMode !== 'unlock' ? 'You will use this to open Nuggets'
+      : fp.isEnrolled() && !fp.inWindow() ? 'Fingerprint works 9am–7pm on weekdays' : '';
+  const finger = state.pinMode === 'unlock' && fp.canUnlock();
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', finger ? 'finger' : '', '0', 'back'];
   return `
     <div class="screen pin">
       <div class="pin-brand"><div class="mark lg">n</div><span class="wordmark lg">nuggets</span></div>
@@ -124,6 +132,8 @@ function pinView() {
       <div class="keypad">
         ${keys.map((k) => k === ''
           ? '<button class="key hidden" aria-hidden="true"></button>'
+          : k === 'finger'
+            ? `<button class="key ghost" data-act="fingerprint" aria-label="Unlock with fingerprint">${FINGER_ICON}</button>`
           : k === 'back'
             ? '<button class="key ghost" data-key="back" aria-label="Delete">⌫</button>'
             : `<button class="key" data-key="${k}">${k}</button>`).join('')}
@@ -149,12 +159,15 @@ function dailyView() {
             <button class="chip-btn" data-act="edit">✎ Edit</button>
             ${speakBtn(e)}
           </div>`
-        : `<div class="empty"><b>Your library is empty</b>Import your Nuggets file (nuggets-private.db) to load your quotes, verses and prayers, or tap View nuggets and + to write your own.
+        : `<div class="empty"><b>Your library is empty</b>Import your Nuggets file (nuggets-private.db) to load your quotes, verses and prayers, or tap New nugget to write your own.
             <div style="margin-top:18px"><button class="chip-btn" data-act="import">Import file</button></div></div>`}
       </div>
       <div class="stack">
         <button class="pill solid" data-act="feed">View nuggets</button>
-        ${e ? '<button class="pill" data-act="shuffle">↻ Another one</button>' : ''}
+        <div class="pill-row">
+          <button class="pill" data-act="compose">+ New nugget</button>
+          ${e ? '<button class="pill" data-act="shuffle">↻ Another one</button>' : ''}
+        </div>
         <button class="pill" data-act="lock">Close</button>
       </div>
     </div>`;
@@ -215,6 +228,7 @@ function libraryView() {
           <button class="tool" data-act="export">Export backup</button>
           <button class="tool" data-act="import">Import backup</button>
           <button class="tool" data-act="change-pin">Change PIN</button>
+          ${fp.isSupported() ? `<button class="tool" data-act="toggle-fingerprint">${fp.isEnrolled() ? 'Turn off fingerprint' : 'Use fingerprint'}</button>` : ''}
         </div>
       </div>
       <div id="lib-list">${libraryListView()}</div>
@@ -329,6 +343,24 @@ function lock() {
   stopSpeaking();
   Object.assign(state, { screen: 'pin', overlay: null, pin: '', pinError: false, pinMode: db.getSetting('pin_hash') ? 'unlock' : 'create' });
   render();
+  if (state.pinMode === 'unlock') fingerprintUnlock(true);
+}
+
+async function fingerprintUnlock(auto = false) {
+  if (!fp.canUnlock()) return;
+  if (await fp.verify()) { if (state.screen === 'pin') unlock(); }
+  else if (!auto && state.screen === 'pin') toast('Fingerprint not recognised, use your PIN');
+}
+
+async function toggleFingerprint() {
+  if (fp.isEnrolled()) { fp.disable(); render(); return toast('Fingerprint turned off'); }
+  try {
+    await fp.enroll();
+    render();
+    toast('Fingerprint on: weekdays 9am–7pm');
+  } catch {
+    toast("Fingerprint wasn't set up");
+  }
 }
 
 function autosize(el) {
@@ -416,6 +448,7 @@ async function pressKey(k) {
 }
 
 function unlock() {
+  fp.cancel();
   Object.assign(state, { screen: 'daily', pin: '', pinMode: 'unlock', daily: db.pickRandom() });
   setTimeout(render, 150);
 }
@@ -500,6 +533,8 @@ const ACTIONS = {
   export: exportBackup,
   import: importBackup,
   'change-pin': () => { db.setSetting('pin_hash', ''); lock(); },
+  fingerprint: () => fingerprintUnlock(),
+  'toggle-fingerprint': toggleFingerprint,
 };
 
 app.addEventListener('click', (ev) => {
@@ -552,8 +587,12 @@ document.addEventListener('visibilitychange', () => {
   if (hiddenAt && Date.now() - hiddenAt > RELOCK_AFTER_MS && state.screen !== 'pin') lock();
 });
 
+// Show or hide the fingerprint key as the 9am–7pm weekday window opens and closes.
+setInterval(() => { if (state.screen === 'pin' && !state.pin) render(); }, 60 * 1000);
+
 // ---------- Boot ----------
 
 await db.openDb();
+await fp.detect();
 lock();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
